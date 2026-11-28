@@ -33,12 +33,19 @@ image of all tests of the product region, with or without zero moments.
   `sLocalLevel_comparison_not_tendsto_zero`: when that term is not zero, the comparison of
   Step III fails on the level.
 
+* `sLocalFullPWSobolev_eq_of_ne_one`. For a nontrivial norm-one character the full band is the
+  level, so the polar complement is zero. A norm-one translate preserves the product region and
+  the value at zero, multiplies the Fourier value at zero by a nonnegative constant and the theta
+  function by `ω h ≠ 1`, and two differences remove both moments without changing the theta
+  function. `sLocalLevel_trace_asymptotic_of_ne_one`: for such a character, given the comparison
+  on the full band, Theorem 12.4.1.1 holds on the level as printed, with no polar term.
+
 The Hilbert-space statements behind these are `polarComplement_spec`,
 `hilbertTrace_nuclearCompress_eq` and `tendsto_hilbertTrace_nuclearCompress_sub`.
 
 Not done here: the comparison on the full band, which is the hypothesis `hFull` and needs the
-descended orbit kernel, and the evaluation of the polar term as Mellin values of the test, which
-#7791 does for `ℚ` with no finite place.
+descended orbit kernel, and, for the trivial character, the evaluation of the polar term as
+Mellin values of the test, which #7791 does for `ℚ` with no finite place.
 -/
 
 @[expose] public noncomputable section
@@ -453,7 +460,7 @@ orthogonal projections. -/
 theorem hasOrthogonalProjection_polarComplement (hs : 0 ≤ s) {a : ℝ} (ha : 0 < a)
     (ω : PontryaginDual J₁) (Λ : ℝ) :
     (fullB(hs, ha, ω, Λ) ⊓ (levelV(hs, ha, ω, Λ))ᗮ).HasOrthogonalProjection :=
-  haveI := (sLocalPWSobolev_polarComplement hs ha ω Λ).2.2.1
+  have := (sLocalPWSobolev_polarComplement hs ha ω Λ).2.2.1
   inferInstance
 
 attribute [local instance] hasOrthogonalProjection_polarComplement
@@ -469,6 +476,240 @@ theorem hilbertTrace_sLocalFullPWSobolev_compress (hs : 0 ≤ s) {a : ℝ} (ha :
       hilbertTrace (nuclearCompress (levelV(hs, ha, ω, Λ)).starProjection T) +
         ∑ i, ⟪(e i : LocalW), T.val (e i)⟫_ℂ :=
   hilbertTrace_nuclearCompress_eq T _ _ (sLocalPWSobolev_polarComplement hs ha ω Λ).1 e
+
+/-! ### A nontrivial norm-one character: the polar complement is zero -/
+
+/-- The S-adelic Fourier transform of a unit translate of a test is a nonnegative multiple of the
+dilate of its Fourier transform by the same unit. The proof repeats a private lemma of
+`Ch07_SchauderBasesZeta/Sec3b`, with the Haar properties of the private `sAdele_fourierMeasure`
+of `Ch03_IdelicZeta/Sec3`. -/
+theorem levelPolar_translate_fourier (u : (SAdeleRing F S)ˣ) :
+    ∃ b : ℝ≥0, ∀ (f : ℬₛ) (y : SAdeleRing F S),
+      sAdeleSchwartzFourier (schwartzBruhatUnitTranslate u f) (Multiplicative.ofAdd y) =
+        ((b : ℝ) : ℂ) * sAdeleSchwartzFourier f (Multiplicative.ofAdd ((u : SAdeleRing F S) * y)) := by
+  let A := SAdeleRing F S
+  let G := Multiplicative A
+  let (w : InfinitePlace F) : MeasurableSpace w.Completion := borel _
+  let (v : HeightOneSpectrum (𝓞 F)) : MeasurableSpace (v.adicCompletion F) := borel _
+  let : MeasurableSpace (InfiniteAdeleRing F) :=
+    inferInstanceAs (MeasurableSpace ((w : InfinitePlace F) → w.Completion))
+  let : MeasurableSpace A :=
+    inferInstanceAs (MeasurableSpace (InfiniteAdeleRing F × ((v : S) → v.val.adicCompletion F)))
+  let μ : Measure G := sAdditiveTamagawaMeasure F S
+  let (v : S) : ProperSpace (v.val.adicCompletion F) := properSpace_adicCompletion v.val
+  let (w : InfinitePlace F) : SecondCountableTopology w.Completion :=
+    (InfinitePlace.Completion.isometry_extensionEmbedding w).isEmbedding.secondCountableTopology
+  let (w : InfinitePlace F) : BorelSpace w.Completion := ⟨rfl⟩
+  let (v : S) : BorelSpace (v.val.adicCompletion F) := ⟨rfl⟩
+  let : LocallyCompactSpace G := inferInstanceAs (LocallyCompactSpace A)
+  let : T2Space A := inferInstanceAs (T2Space
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : T2Space G := ‹T2Space A›
+  let : SigmaCompactSpace A := inferInstanceAs (SigmaCompactSpace
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : BorelSpace A := inferInstanceAs (BorelSpace
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : BorelSpace G := ‹BorelSpace A›
+  let (w : InfinitePlace F) : (infiniteLocalAdditiveTamagawaMeasure F w).IsAddHaarMeasure :=
+    infiniteLocalAdditiveTamagawaMeasure_haar F w
+  let (v : S) : (finiteLocalAdditiveTamagawaMeasure F v.val).IsAddHaarMeasure :=
+    finiteLocalAdditiveTamagawaMeasure_isAddHaar F v.val
+  let : (Measure.pi (infiniteLocalAdditiveTamagawaMeasure F)).IsAddHaarMeasure :=
+    Measure.pi.isAddHaarMeasure _
+  let : (Measure.pi (fun v : S ↦ finiteLocalAdditiveTamagawaMeasure F v.val)).IsAddHaarMeasure :=
+    Measure.pi.isAddHaarMeasure _
+  let hμ : (sAdditiveTamagawaMeasure F S).IsAddHaarMeasure :=
+    Measure.prod.instIsAddHaarMeasure _ _
+  let : μ.IsHaarMeasure :=
+    { toIsFiniteMeasureOnCompacts := hμ.toIsFiniteMeasureOnCompacts
+      toIsOpenPosMeasure := hμ.toIsOpenPosMeasure
+      map_mul_left_eq_self := fun x ↦ hμ.map_add_left_eq_self x.toAdd }
+  let : μ.Regular := addHaar_regular_of_sigmaCompactSpace (sAdditiveTamagawaMeasure F S)
+  let d : G ≃ₜ* G :=
+    { toFun := fun x ↦ Multiplicative.ofAdd ((↑u⁻¹ : A) * x.toAdd)
+      invFun := fun x ↦ Multiplicative.ofAdd ((u : A) * x.toAdd)
+      left_inv := fun x ↦ Multiplicative.ext (by simp [← mul_assoc])
+      right_inv := fun x ↦ Multiplicative.ext (by simp [← mul_assoc])
+      map_mul' := fun x y ↦ Multiplicative.ext (mul_add _ _ _)
+      continuous_toFun := continuous_ofAdd.comp (continuous_const.mul continuous_toAdd)
+      continuous_invFun := continuous_ofAdd.comp (continuous_const.mul continuous_toAdd) }
+  let ν := μ.map d
+  let : ν.IsHaarMeasure := d.isHaarMeasure_map μ
+  let : ν.Regular := Measure.Regular.map d.toHomeomorph
+  refine ⟨ν.haarScalarFactor μ, fun f y ↦ ?_⟩
+  let k : G → ℂ := fun x ↦
+    f x * star ((sAdeleStandardCharacter F S (x.toAdd * ((u : A) * y)) : Circle) : ℂ)
+  have h1 : (∫ x : G, k (d.toHomeomorph.toMeasurableEquiv x) ∂μ) =
+      ((ν.haarScalarFactor μ : ℝ) : ℂ) * ∫ x : G, k x ∂μ := by
+    rw [← integral_map_equiv d.toHomeomorph.toMeasurableEquiv k]
+    change (∫ x : G, k x ∂ν) = _
+    calc
+      _ = ∫ x : G, k x ∂(ν.haarScalarFactor μ • μ) :=
+        congrArg (fun m : Measure G ↦ ∫ x : G, k x ∂m)
+          (Measure.isMulLeftInvariant_eq_smul_of_regular ν μ)
+      _ = _ := by
+        rw [integral_smul_nnreal_measure]
+        rfl
+  refine Eq.trans ?_ h1
+  change (∫ x : A, f (Multiplicative.ofAdd ((↑u⁻¹ : A) * x)) *
+    star ((sAdeleStandardCharacter F S (x * y) : Circle) : ℂ) ∂(sAdditiveTamagawaMeasure F S)) =
+    ∫ x : A, f (Multiplicative.ofAdd ((↑u⁻¹ : A) * x)) *
+      star ((sAdeleStandardCharacter F S (((↑u⁻¹ : A) * x) * ((u : A) * y)) : Circle) : ℂ)
+      ∂(sAdditiveTamagawaMeasure F S)
+  refine integral_congr_ae (Filter.Eventually.of_forall fun x ↦ ?_)
+  change _ * star ((sAdeleStandardCharacter F S (x * y) : Circle) : ℂ) =
+    _ * star ((sAdeleStandardCharacter F S (((↑u⁻¹ : A) * x) * ((u : A) * y)) : Circle) : ℂ)
+  rw [mul_mul_mul_comm, Units.inv_mul, one_mul]
+
+/-- A function that is a multiple of another composed with a homeomorphism has compact support,
+contained in the preimage of the support of the other. -/
+theorem levelPolar_translate_support {G : Type*} [TopologicalSpace G]
+    (e : G ≃ₜ G) (b : ℂ) (φ ψ : G → ℂ) (hψ : ∀ x, ψ x = b * φ (e x)) (s t : Set G)
+    (hs : e ⁻¹' s ⊆ t) (hc : HasCompactSupport φ) (hφ : tsupport φ ⊆ s) :
+    HasCompactSupport ψ ∧ tsupport ψ ⊆ t := by
+  have hsub : tsupport ψ ⊆ e ⁻¹' tsupport φ := by
+    refine closure_minimal (fun x hx ↦ ?_) ((isClosed_tsupport φ).preimage e.continuous)
+    refine subset_tsupport φ ?_
+    intro h0
+    exact hx ((hψ x).trans (by rw [h0, mul_zero]))
+  have hcomp : IsCompact (e ⁻¹' tsupport φ) := e.isCompact_preimage.mpr hc
+  exact ⟨hcomp.of_isClosed_subset (isClosed_tsupport ψ) hsub,
+    hsub.trans ((Set.preimage_mono hφ).trans hs)⟩
+
+/-- The transition of tests from a stage to itself is the identity. -/
+theorem levelPolar_transition_self (f : ℬₛ) :
+    sAdeleSchwartzTransition F (le_rfl (a := S)) f = f := by
+  classical
+  apply Subtype.ext
+  funext x
+  rw [← show Multiplicative.ofAdd x.toAdd = x from rfl, sAdeleSchwartzTransition_apply,
+    ite_eq_left (fun w hw ↦ (hw w.property).elim)]
+
+/-- The product of the normalized local absolute values of an S-adele. -/
+def levelPolarProduct (x : SAdeleRing F S) : ℝ :=
+  (∏ w : InfinitePlace F, ‖x.1 w‖ ^ w.mult) * ∏ v : S, ‖x.2 v‖
+
+theorem levelPolarProduct_unit (a : (SAdeleRing F S)ˣ) :
+    levelPolarProduct a.val = ((sIdeleNorm F S a).val : ℝ) := by
+  let evaluate : ((SAdeleRing F S)ˣ →* ℝ≥0ˣ) →* ℝ :=
+    NNReal.toRealHom.toMonoidHom.comp ((Units.coeHom ℝ≥0).comp (MonoidHom.eval a))
+  change levelPolarProduct a.val = evaluate (sIdeleNorm F S)
+  simp only [sIdeleNorm, map_mul, map_prod, map_pow]
+  rfl
+
+theorem levelPolarProduct_mul (x y : SAdeleRing F S) :
+    levelPolarProduct (x * y) = levelPolarProduct x * levelPolarProduct y := by
+  unfold levelPolarProduct
+  change (∏ w : InfinitePlace F, ‖x.1 w * y.1 w‖ ^ w.mult) *
+    (∏ v : S, ‖x.2 v * y.2 v‖) = _
+  simp only [norm_mul, mul_pow, Finset.prod_mul_distrib]
+  exact mul_mul_mul_comm _ _ _ _
+
+/-- Paper: Definition 7.3.2.3(1), p. 355. Multiplication by an S-idele of norm one preserves the
+product region. -/
+theorem unit_mul_mem_sLocalPWProductRegion {u : (SAdeleRing F S)ˣ} (hu : sIdeleNorm F S u = 1)
+    (Λ : ℝ) (y : SAdeleRing F S) :
+    (u : SAdeleRing F S) * y ∈ sLocalPWProductRegion S Λ ↔ y ∈ sLocalPWProductRegion S Λ := by
+  change levelPolarProduct ((u : SAdeleRing F S) * y) ≤ Λ ↔ levelPolarProduct y ≤ Λ
+  rw [levelPolarProduct_mul, levelPolarProduct_unit, hu, Units.val_one, NNReal.coe_one, one_mul]
+
+/-- Paper: Proposition 7.3.2.4(3), p. 356, for norm-one translates of tests.
+Translation by an S-idele of norm one preserves the tests of the product region. -/
+theorem unitTranslate_mem_sLocalPWTests {u : (SAdeleRing F S)ˣ} (hu : sIdeleNorm F S u = 1)
+    {Λ : ℝ} {f : ℬₛ} (hf : f ∈ tests(Λ)) : schwartzBruhatUnitTranslate u f ∈ tests(Λ) := by
+  obtain ⟨h, hh, hband⟩ := (mem_sLocalPWTests le_rfl _ f).mp hf
+  rw [levelPolar_transition_self] at hh
+  subst hh
+  refine (mem_sLocalPWTests le_rfl _ _).mpr
+    ⟨schwartzBruhatUnitTranslate u h, levelPolar_transition_self _, ?_⟩
+  obtain ⟨b, hb⟩ := levelPolar_translate_fourier u
+  let e : Multiplicative (SAdeleRing F S) ≃ₜ Multiplicative (SAdeleRing F S) :=
+    { toFun := fun y ↦ Multiplicative.ofAdd ((u : SAdeleRing F S) * y.toAdd)
+      invFun := fun y ↦ Multiplicative.ofAdd ((↑u⁻¹ : SAdeleRing F S) * y.toAdd)
+      left_inv := fun y ↦ Multiplicative.ext (by simp [← mul_assoc])
+      right_inv := fun y ↦ Multiplicative.ext (by simp [← mul_assoc])
+      continuous_toFun := continuous_ofAdd.comp (continuous_const.mul continuous_toAdd)
+      continuous_invFun := continuous_ofAdd.comp (continuous_const.mul continuous_toAdd) }
+  exact levelPolar_translate_support e ((b : ℝ) : ℂ) (sAdeleSchwartzFourier h).val
+    (sAdeleSchwartzFourier (schwartzBruhatUnitTranslate u h)).val (fun y ↦ hb h y.toAdd)
+    (Multiplicative.toAdd ⁻¹' sLocalPWProductRegion S Λ)
+    (Multiplicative.toAdd ⁻¹' sLocalPWProductRegion S Λ)
+    (fun y hy ↦ (unit_mul_mem_sLocalPWProductRegion hu Λ y.toAdd).mp hy) hband.1 hband.2
+
+/-- Two tests with the same homogeneous theta function have the same full theta class. -/
+theorem sLocalFullPWThetaSobolevMap_congr {a : ℝ} (ha : 0 < a) (ω : PontryaginDual J₁)
+    {f g : ℬₛ} (h : sLocalHomogeneousAdelicThetaLinearMap F S ω f =
+      sLocalHomogeneousAdelicThetaLinearMap F S ω g) :
+    sLocalFullPWThetaSobolevMap (s := s) ha ω f = sLocalFullPWThetaSobolevMap (s := s) ha ω g := by
+  simp only [sLocalFullPWThetaSobolevMap, LinearMap.coe_mk, AddHom.coe_mk]
+  exact MemLp.toLp_congr _ _ (.of_forall fun x ↦ by rw [h])
+
+/-- Paper: Equation (7.3.3.25), p. 363, and Definition 11.2.1.3(1), p. 488.
+Reconstruction: for a nontrivial norm-one character `ω`, every test of the product region has
+the same homogeneous theta function as a polar-free test of the same region. So the full band is
+the polar-free level, and the polar complement is zero. This is the band-limited form of
+`sLocalZeroMomentTheta_eq_top`: a norm-one translate preserves the region and the value at zero,
+multiplies the Fourier value at zero by a nonnegative constant and the theta function by
+`ω h ≠ 1`, and two differences remove both moments. -/
+theorem sLocalFullPWSobolev_eq_of_ne_one (hs : 0 ≤ s) {a : ℝ} (ha : 0 < a)
+    (ω : PontryaginDual J₁) (hω : ω ≠ 1) (Λ : ℝ) :
+    fullB(hs, ha, ω, Λ) = levelV(hs, ha, ω, Λ) := by
+  refine le_antisymm ?_ (sLocalPWSobolev_polarComplement hs ha ω Λ).1
+  rw [sLocalInvariantPWSobolev_eq_closure_map hs ha ω Λ]
+  refine Submodule.topologicalClosure_mono ?_
+  have hex : ∃ h : J₁, (ω h : ℂ) ≠ 1 :=
+    not_forall.mp fun hall ↦ hω (PontryaginDual.ext fun x ↦ Subtype.ext (hall x))
+  obtain ⟨h, hh⟩ := hex
+  obtain ⟨u, hu⟩ := QuotientGroup.mk_surjective h.val
+  have hnorm : sIdeleNorm F S u = 1 := by
+    have h1 : sIdeleQuotientNorm F S (QuotientGroup.mk u) = 1 := by
+      rw [hu]
+      exact MonoidHom.mem_ker.mp h.2
+    exact h1
+  obtain ⟨b, hb⟩ := levelPolar_translate_fourier u
+  have hne : (ω h : ℂ) ≠ ((b : ℝ) : ℂ) := by
+    intro he
+    have hb1 : (b : ℝ) = 1 :=
+      (Real.norm_of_nonneg b.property).symm.trans
+        ((Complex.norm_real _).symm.trans ((congrArg norm he).symm.trans (Circle.norm_coe _)))
+    exact hh (he.trans (by exact_mod_cast hb1))
+  let θ := sLocalHomogeneousAdelicThetaLinearMap F S ω
+  let p := sAdelePolarValuesMap (F := F) (S := S)
+  let t := schwartzBruhatUnitTranslate u
+  have hp : ∀ f, p (t f) = ((p f).1, ((b : ℝ) : ℂ) * (p f).2) := by
+    intro f
+    apply Prod.ext
+    · exact congrArg f (congrArg Multiplicative.ofAdd (mul_zero _))
+    · change sAdeleSchwartzFourier (schwartzBruhatUnitTranslate u f) (Multiplicative.ofAdd 0) = _
+      rw [hb f 0, mul_zero]
+      rfl
+  have hθ : ∀ f, θ (t f) = (ω h : ℂ) • θ f := fun f ↦
+    sLocalHomogeneousTheta_unitTranslate ω h u hu f
+  have ht : ∀ f ∈ tests(Λ), t f ∈ tests(Λ) := fun f hf ↦ unitTranslate_mem_sLocalPWTests hnorm hf
+  rintro _ ⟨f, hf, rfl⟩
+  let aa : ℂ := ω h
+  let bb : ℂ := ((b : ℝ) : ℂ)
+  let k := t f - f
+  let g := t k - bb • k
+  let c := (aa - bb) * (aa - 1)
+  have hc : c ≠ 0 := mul_ne_zero (sub_ne_zero.mpr hne) (sub_ne_zero.mpr hh)
+  have hk : k ∈ tests(Λ) := Submodule.sub_mem _ (ht f hf) hf
+  have hg : g ∈ tests(Λ) := Submodule.sub_mem _ (ht k hk) (Submodule.smul_mem _ _ hk)
+  have hk1 : (p k).1 = 0 := by simp [k, hp]
+  have hgp : p g = 0 := by
+    change p (t k - bb • k) = 0
+    rw [map_sub, map_smul, hp, sub_eq_zero]
+    exact Prod.ext (by simp [hk1]) (by simp [bb])
+  have hθk : θ k = (aa - 1) • θ f := by simp [k, hθ, sub_smul, aa]
+  have hθg : θ g = c • θ f := by
+    change θ (t k - bb • k) = _
+    rw [map_sub, map_smul, hθ, ← sub_smul, hθk, smul_smul]
+  refine ⟨c⁻¹ • g, ⟨Submodule.smul_mem _ _ hg, ?_⟩, ?_⟩
+  · change p (c⁻¹ • g) = 0
+    rw [map_smul, hgp, smul_zero]
+  · refine sLocalFullPWThetaSobolevMap_congr ha ω ?_
+    change θ (c⁻¹ • g) = θ f
+    rw [map_smul, hθg, smul_smul, inv_mul_cancel₀ hc, one_smul]
 
 end Levels
 
@@ -596,6 +837,50 @@ theorem sLocalLevel_comparison_not_tendsto_zero (hs : 0 ≤ s) {a : ℝ} (ha : 0
   have hlev := tendsto_hilbertTrace_nuclearCompress_sub T _ _
     (sLocalPWSobolev_polarComplement hs ha ω Λ).1 e A (fun p ↦ M (p.1 * p.2)) hFull hDiag
   exact hpolar (neg_eq_zero.mp (tendsto_nhds_unique hlev h0))
+
+/-- Paper: Theorem 12.4.1.1, p. 514, with Step III, p. 517, for every number field and a
+nontrivial norm-one character.
+Reconstruction: for `ω ≠ 1` the polar complement is zero (`sLocalFullPWSobolev_eq_of_ne_one`).
+So if the traces compressed to the full band agree with the summed sharp masses up to `o(1)`,
+the traces compressed to the polar-free level satisfy the conclusion of Theorem 12.4.1.1 as
+printed, with no polar term.
+Deviation: The comparison on the full band is a hypothesis. The bandwidth `Λ` is fixed. -/
+theorem sLocalLevel_trace_asymptotic_of_ne_one
+    (φ : BruhatCompactSupport C𝔽)
+    (hPic : Subsingleton (CommRing.Pic ((S : Set (HeightOneSpectrum (𝓞 F))).integer F)))
+    (hRamified : ∀ v : HeightOneSpectrum (𝓞 F), differentIdeal ℤ (𝓞 F) ≤ v.asIdeal → v ∈ S)
+    (hOutside : ∀ (a : outsideIntegralIdeleUnits F S) (c : C𝔽),
+      φ.val (QuotientGroup.mk a.val * c) = φ.val c)
+    (f : BruhatCompactSupport Iₛ)
+    (hLift : ∀ g : Iₛ, HasSum (fun ξ : Hₛ ↦ f.val (ξ.val * g)) (φ.val (classAtS(g))))
+    (hs : 0 ≤ s) {a : ℝ} (ha : 0 < a) (ω : PontryaginDual J₁) (hω : ω ≠ 1) (Λ : ℝ)
+    (T : ℝ × ℝ → nuclearEndomorphisms LocalW) (M : ℝ → ℂ)
+    (hSum : ∀ᶠ R in atTop, HasSum (fun ξ : Hₛ ↦ sLocalTraceSharpMass f ξ R) (M R))
+    (hFull : Tendsto (fun p : ℝ × ℝ ↦
+        hilbertTrace (nuclearCompress (fullB(hs, ha, ω, Λ)).starProjection (T p)) -
+          M (p.1 * p.2)) (atTop ×ˢ atTop) (𝓝 0)) :
+    ∃ (pa : archTest) (pb : finiteTest),
+      (∀ (w : InfinitePlace F) (x : w.Completionˣ), (pa w).val x = φ.val (archClass(w) x)) ∧
+      (∀ (v : S) (x : (v.val.adicCompletion F)ˣ), (pb v).val x = φ.val (finiteClass(v.val) x)) ∧
+      Tendsto (fun p : ℝ × ℝ ↦
+          hilbertTrace (nuclearCompress (levelV(hs, ha, ω, Λ)).starProjection (T p)) -
+            (volume₁ : ℂ) * φ.val 1 * (Real.log (p.1 * p.2) : ℂ)) (atTop ×ˢ atTop)
+        (𝓝 ((volume₁ : ℂ) * principalValues(pa, pb))) := by
+  have := (sLocalPWSobolev_polarComplement hs ha ω Λ).2.2.1
+  let e := stdOrthonormalBasis ℂ ↥(fullB(hs, ha, ω, Λ) ⊓ (levelV(hs, ha, ω, Λ))ᗮ)
+  have key : ∀ x : LocalW, x ∈ fullB(hs, ha, ω, Λ) → x ∈ (levelV(hs, ha, ω, Λ))ᗮ → x = 0 := by
+    intro x h1 h2
+    rw [sLocalFullPWSobolev_eq_of_ne_one hs ha ω hω Λ] at h1
+    exact inner_self_eq_zero.mp (Submodule.inner_right_of_mem_orthogonal h1 h2)
+  have hz : ∀ i, (e i : LocalW) = 0 := fun i ↦ key _ (e i).2.1 (e i).2.2
+  have hmain := sLocalLevel_trace_asymptotic_of_full_comparison φ hPic hRamified hOutside f hLift
+    hs ha ω Λ e T 0 M hSum hFull (fun i ↦ by
+      simp only [hz i, inner_zero_left]
+      exact tendsto_const_nhds)
+  obtain ⟨pa, pb, hpa, hpb, h⟩ := hmain
+  refine ⟨pa, pb, hpa, hpb, ?_⟩
+  have hsum0 : ∑ i, ⟪(e i : LocalW), (0 : LocalW →L[ℂ] LocalW) (e i)⟫_ℂ = 0 := by simp
+  rwa [hsum0, sub_zero] at h
 
 end Assembly
 
