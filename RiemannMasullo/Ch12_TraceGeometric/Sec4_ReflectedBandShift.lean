@@ -28,10 +28,10 @@ general facts proved in `Sec4_RationalLevelIdentification` of #7791, under new n
 two pull requests can merge in either order.
 -/
 
-public noncomputable section
+@[expose] public noncomputable section
 
 open Filter Function IsDedekindDomain MeasureTheory NumberField Set
-open scoped ENNReal FourierTransform NNReal NumberField.AdeleRing Topology InnerProductSpace
+open scoped ENNReal FourierTransform NNReal NumberField.AdeleRing Topology InnerProductSpace SchwartzMap
 
 namespace RiemannMasullo.Isolated
 
@@ -317,16 +317,17 @@ local notation "modulus" => continuousSIdeleQuotientNorm F S
 local notation "μJ" => sLocalQuotientTamagawaMeasure F S
 local notation "ℓ" => logSIdeleQuotientNorm F S
 local notation "ν(" s ")" => intervalSobolevMeasure μJ ℓ 0 0 s
-local notation "W(" s ")" => Lp ℂ 2 ν(s)
+local notation "W(" s ")" => CompactIntervalSobolev μJ ℓ 0 0 s
 local notation "fullBand(" ω "," B ")" =>
   Isolated.sLocalFullPWSobolev (F := F) (S := S) (s := 0) le_rfl
     (show (0 : ℝ) < 1 / 2 by norm_num) ω B
 
-private theorem measurable_logNorm_comp {ρ : ℝ → ℝ} (hρm : Measurable ρ) :
+theorem measurable_logNorm_comp {ρ : ℝ → ℝ} (hρm : Measurable ρ) :
     Measurable (ρ ∘ ℓ) :=
   hρm.comp (Real.measurable_log.comp (NNReal.continuous_coe.comp
     (Units.continuous_val.comp (continuousSIdeleQuotientNorm F S).continuous)).measurable)
 
+set_option maxHeartbeats 2000000 in
 /-- Paper: Theorem 12.4.1.1, pp. 515–518, the trace on the full band at Sobolev order zero.
 Reconstruction: the trace of the upper-cutoff test action compressed to the full band of radius
 `B` is unchanged when the band radius becomes `B'` and the cutoff profile `ρ`, a function of the
@@ -356,7 +357,11 @@ theorem hilbertTrace_sLocalFullPW_upperCutoff_eq_of_shift_orderZero
     Full.val = V.starProjection * (M.comp A) * V.starProjection →
     Full'.val = V'.starProjection * (M'.comp A) * V'.starProjection →
     hilbertTrace Full' = hilbertTrace Full := by
-  intro V V' _ _ A M M' hFull hFull'
+  intro V V' A M M' hFull hFull'
+  have : CompleteSpace V :=
+    (show IsClosed (V : Set W(0)) from Submodule.isClosed_topologicalClosure _).completeSpace_coe
+  have : CompleteSpace V' :=
+    (show IsClosed (V' : Set W(0)) from Submodule.isClosed_topologicalClosure _).completeSpace_coe
   obtain ⟨χ, Q, L, U, hχ, hsec, -, -, hL, hU, hGen, hBands, hQL, -⟩ :=
     exists_sLocalFullReflectedCoordinates_coeffLift_orderZero (F := F) (S := S) τ hτ ω
   let T : W(0) →L[ℂ] Lp ℂ 2 (volume : Measure ℝ) := U.toLinearIsometry.toContinuousLinearMap.comp Q
@@ -364,8 +369,7 @@ theorem hilbertTrace_sLocalFullPW_upperCutoff_eq_of_shift_orderZero
       ∀ u ∈ fullBand(ω,b), ∀ᵐ x : ℝ ∂volume, x < -Real.log b → T u x = 0 := by
     intro u hu
     have hr : T u ∈ Set.range (fun u : fullBand(ω,b) ↦ U (Q u.val)) := ⟨⟨u, hu⟩, rfl⟩
-    rw [(hBands b hb).2] at hr
-    exact hr
+    exact (Set.ext_iff.mp (hBands b hb).2 (T u)).mp hr
   have hTI (a : ℝ) (r : RiemannMasullo.l2HalfLine a) : T (halfLineLift L U a r) = r := by
     change U (Q (L (U.symm r))) = r
     rw [hQL, LinearIsometryEquiv.apply_symm_apply]
@@ -414,13 +418,13 @@ theorem hilbertTrace_sLocalFullPW_upperCutoff_eq_of_shift_orderZero
       halfLineLift_mem Q L U V _ (hBands B hB).1 (hBands B hB).2 r⟩),
     RiemannMasullo.ae_comp_sub h1 s, h2] with x hx₁ hx₂ hx₃
   rw [hx₁, hx₂, hx₃, hshift]
-  have hconv : (∫ y, q (x - y) * ((r' : RiemannMasullo.l2HalfLine (-Real.log B')) :
-      Lp ℂ 2 (volume : Measure ℝ)) y) = ∫ y, q (x - s - y) * (r : Lp ℂ 2 (volume : Measure ℝ)) y := by
+  have hconv : (∫ y, q' (x - y) * ((r' : RiemannMasullo.l2HalfLine (-Real.log B')) :
+      Lp ℂ 2 (volume : Measure ℝ)) y) = ∫ y, q' (x - s - y) * (r : Lp ℂ 2 (volume : Measure ℝ)) y := by
     rw [hr']
     rw [integral_congr_ae ((RiemannMasullo.l2Translate_ae s r).mono fun y hy ↦
-      congrArg (fun z ↦ q (x - y) * z) hy)]
+      congrArg (fun z ↦ q' (x - y) * z) hy)]
     have hshift' := integral_add_right_eq_self (μ := (volume : Measure ℝ))
-      (fun y : ℝ ↦ q (x - y) * (r : Lp ℂ 2 (volume : Measure ℝ)) (y - s)) s
+      (fun y : ℝ ↦ q' (x - y) * (r : Lp ℂ 2 (volume : Measure ℝ)) (y - s)) s
     rw [← hshift']
     refine integral_congr_ae (ae_of_all _ fun y ↦ ?_)
     simp only [add_sub_cancel_right]

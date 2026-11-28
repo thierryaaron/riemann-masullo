@@ -78,7 +78,7 @@ theorem coeff_lift_eq_self_of_bands (Q : W →L[ℂ] FlatL2) (L : FlatL2 →ₗ�
     change Q (L (U.symm (U (Q u)))) = U.symm (U (Q u))
     rw [LinearIsometryEquiv.symm_apply_apply, hRecover _ hB u hu]
   have hdense : Dense (U.symm '' D) :=
-    (U.symm.toHomeomorph.dense_image).mpr dense_setOf_ae_eq_zero_lt
+    U.symm.surjective.denseRange.dense_image U.symm.continuous dense_setOf_ae_eq_zero_lt
   exact congrFun (Continuous.ext_on hdense G.continuous continuous_id hEq) v
 
 end Abstract

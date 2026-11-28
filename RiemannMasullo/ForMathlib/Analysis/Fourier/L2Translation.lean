@@ -17,7 +17,7 @@ import Mathlib.Analysis.Distribution.SchwartzSpace.Basic
   `l2Translate s` maps it onto `l2HalfLine (a + s)`.
 -/
 
-public noncomputable section
+@[expose] public noncomputable section
 
 open Filter MeasureTheory Set
 open scoped ENNReal FourierTransform
@@ -29,7 +29,8 @@ local notation "fourierL2" => Lp.fourierTransformₗᵢ ℝ ℂ
 
 section Translate
 
-private theorem l2Translate_surjective (s : ℝ) :
+/-- Translation by `s` is onto. -/
+theorem l2Translate_surjective (s : ℝ) :
     Function.Surjective (Lp.compMeasurePreservingₗᵢ ℂ (fun x : ℝ ↦ x - s)
       (measurePreserving_sub_right volume s) : FlatL2 → FlatL2) := by
   intro w
