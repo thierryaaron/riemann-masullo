@@ -11,7 +11,7 @@ PLACEHOLDER
 @[expose] public noncomputable section
 
 open Filter MeasureTheory Set NumberField IsDedekindDomain
-open scoped Topology NumberField ENNReal NNReal InnerProductSpace
+open scoped Topology NumberField ENNReal NNReal InnerProductSpace FourierTransform SchwartzMap
 
 namespace RiemannMasullo.Isolated
 
@@ -188,6 +188,80 @@ theorem levelIdent_fundamentalDomain_map (D : Set Iₛ)
 
 end QuotientMeasure
 
+section SchwartzCriterion
+
+open Function
+
+/-- Euclidean coordinates identify the Schwartz–Bruhat functions with the classical Schwartz
+functions. The same statement as the private `mem_schwartzBruhatSubmodule_euclidean_iff` of
+`Ch02_AdelicTheta/Sec2b`, repeated so that that file does not change. -/
+theorem levelIdent_mem_schwartzBruhatSubmodule_euclidean_iff
+    {A : Type*} [CommGroup A] [TopologicalSpace A] [IsTopologicalGroup A] [T2Space A]
+    [LocallyCompactSpace A] {n : ℕ}
+    (v : A ≃ₜ* Multiplicative (EuclideanSpace ℝ (Fin n))) (g : A → ℂ) :
+    g ∈ schwartzBruhatSubmodule A ↔
+      ∃ s : SchwartzMap (EuclideanSpace ℝ (Fin n)) ℂ, ∀ x, s (v x).toAdd = g x := by
+  classical
+  let E := EuclideanSpace ℝ (Fin n)
+  let P := ElementaryLieGroup n 0 0 PUnit
+  let D := (Fin 0 → AddCircle (1 : ℝ)) × (Fin 0 → ℤ) × PUnit
+  let : Unique D := uniqueOfSubsingleton 0
+  let p : Multiplicative E ≃ₜ* Multiplicative P :=
+    { toMulEquiv := (AddEquiv.prodUnique (M := E) (N := D)).symm.toMultiplicative
+      continuous_toFun := (continuous_id.prodMk continuous_const :
+        Continuous (fun x : E ↦ (x, (default : D))))
+      continuous_invFun := (continuous_fst : Continuous (Prod.fst : E × D → E)) }
+  let e : ElementaryLCAPresentation A :=
+    { realDim := n, torusDim := 0, latticeRank := 0, finiteFactor := PUnit, equiv := v.trans p }
+  have hA := (lca_elementary_iff (G := A)).mpr ⟨e⟩
+  let i : (⊤ : Subgroup A) ≃ₜ* A :=
+    { Subgroup.topEquiv with
+      continuous_toFun := continuous_subtype_val
+      continuous_invFun := continuous_id.subtype_mk _ }
+  let a : BruhatStructuralPair A := ⟨(⊤, OrderDual.toDual ⊥), by simp,
+    isCompactlyGeneratedGroup_of_continuousMulEquiv i.symm hA.1,
+    isBruhatGoodSubgroup_bot_iff.mpr hA.2, bot_le⟩
+  let q₀ : A →* a.quotient := (QuotientGroup.mk' _).comp i.symm.toMulEquiv.toMonoidHom
+  have hq₀ : IsOpenQuotientMap q₀ :=
+    QuotientGroup.isOpenQuotientMap_mk.comp i.symm.toHomeomorph.isOpenQuotientMap
+  have hinj : Injective q₀ := (MonoidHom.ker_eq_bot_iff q₀).mp (eq_bot_iff.mpr fun x hx ↦ by
+    exact (a.quotient_mk_eq_one (i.symm x)).mp hx)
+  let q := (MulEquiv.ofBijective q₀ ⟨hinj, hq₀.surjective⟩).toContinuousMulEquiv
+    (fun _ ↦ hq₀.isQuotientMap.isOpen_preimage)
+  let e₀ : ElementaryLCAPresentation a.quotient := { e with equiv := q.symm.trans e.equiv }
+  have hreal (s : SchwartzBruhatStage e₀) (x : A) :
+      schwartzBruhatStageRealization a e₀ s x = s ((v x).toAdd, 0, 0, PUnit.unit) := by
+    have hx : x ∈ a.val.1 := Subgroup.mem_top x
+    rw [schwartzBruhatStageRealization_apply, dite_eq_left hx]
+    change s ((e₀.equiv (q x)).toAdd) = _
+    change s ((e.equiv (q.symm (q x))).toAdd) = _
+    rw [q.symm_apply_apply]
+    rfl
+  have hrange : schwartzBruhatSubmodule A = (schwartzBruhatStageRealization a e₀).range := by
+    refine le_antisymm (iSup_le fun b ↦ iSup_le fun eb ↦ ?_) ?_
+    · rintro _ ⟨sb, rfl⟩
+      obtain ⟨j, hj, _⟩ := schwartzBruhatStage_transition (show b ≤ a from ⟨le_top, le_top⟩) eb e₀
+      exact ⟨j sb, hj sb⟩
+    · exact le_iSup_of_le a (le_iSup (fun e ↦ (schwartzBruhatStageRealization a e).range) e₀)
+  rw [hrange, LinearMap.mem_range]
+  constructor
+  · rintro ⟨s, hs⟩
+    let f : E → ℂ := fun x ↦ s (x, 0, 0, PUnit.unit)
+    have hs' (y : P) : f y.1 = s y :=
+      congrArg (fun z : P ↦ s z) (Prod.ext rfl (Subsingleton.elim _ _))
+    have hf : (fun y : P ↦ f y.1) ∈ elementarySchwartzSubmodule n 0 0 PUnit :=
+      (funext hs').symm ▸ s.property
+    obtain ⟨S, hS⟩ := (elementarySchwartzSubmodule_real_iff f).mp hf
+    refine ⟨S, fun x ↦ ?_⟩
+    exact (congrFun hS (v x).toAdd).trans
+      ((hreal s x).symm.trans (congrFun hs x))
+  · rintro ⟨s, hs⟩
+    let t : SchwartzBruhatStage e₀ :=
+      ⟨fun y : P ↦ s y.1, (elementarySchwartzSubmodule_real_iff _).mpr ⟨s, rfl⟩⟩
+    exact ⟨t, funext fun x ↦ (hreal t x).trans (hs x)⟩
+
+end SchwartzCriterion
+
 section RatQuotient
 
 attribute [local instance] instIdeleClassMeasurableSpaceSec1 instSIdeleQuotientMeasurableSpaceSec1
@@ -309,6 +383,67 @@ theorem ratHomogeneousTheta_apply (ω : PontryaginDual (sIdeleQuotientNorm ℚ S
   have h1 : (default : (sIdeleQuotientNorm ℚ Sq).ker) = 1 := rfl
   simp only [h1, OneMemClass.coe_one, mul_one, map_one, Circle.coe_one]
   rw [sLocalAdelicThetaOnClasses_mk, ratTheta_apply, Complex.real_smul, measureReal_def]
+
+/-- The real line as one-dimensional Euclidean space. -/
+def ratEuclideanLine : ℝ ≃L[ℝ] EuclideanSpace ℝ (Fin 1) :=
+  (ContinuousLinearEquiv.funUnique (Fin 1) ℝ ℝ).symm.trans (EuclideanSpace.equiv (Fin 1) ℝ).symm
+
+/-- The real coordinate of the S-adeles of `ℚ` with no finite place, as an isomorphism of
+topological groups onto one-dimensional Euclidean space. -/
+def ratEuclideanCoord :
+    Multiplicative (SAdeleRing ℚ Sq) ≃ₜ* Multiplicative (EuclideanSpace ℝ (Fin 1)) :=
+  { toMulEquiv := (ratRealCoordEquiv.toAddEquiv.trans
+      ratEuclideanLine.toLinearEquiv.toAddEquiv).toMultiplicative
+    continuous_toFun := ratEuclideanLine.continuous.comp continuous_ratRealCoordEquiv
+    continuous_invFun := continuous_ratRealCoordEquiv_symm.comp ratEuclideanLine.symm.continuous }
+
+/-- The S-adeles of `ℚ` with no finite place are locally compact, as the real line is. -/
+theorem ratSAdele_locallyCompact : LocallyCompactSpace (SAdeleRing ℚ Sq) :=
+  (Homeomorph.mk ratRealCoordEquiv.toEquiv continuous_ratRealCoordEquiv
+    continuous_ratRealCoordEquiv_symm).isClosedEmbedding.locallyCompactSpace
+
+/-- Reconstruction: for `ℚ` with no finite place, the Schwartz–Bruhat functions on the
+S-adeles are the Schwartz functions of the real coordinate. -/
+theorem ratSchwartzBruhat_iff (g : Multiplicative (SAdeleRing ℚ Sq) → ℂ) :
+    g ∈ schwartzBruhatSubmodule (Multiplicative (SAdeleRing ℚ Sq)) ↔
+      ∃ s : 𝓢(ℝ, ℂ), ∀ x, s (eq x.toAdd) = g x := by
+  have : LocallyCompactSpace (SAdeleRing ℚ Sq) := ratSAdele_locallyCompact
+  have : LocallyCompactSpace (Multiplicative (SAdeleRing ℚ Sq)) := ‹LocallyCompactSpace _›
+  have : T2Space (SAdeleRing ℚ Sq) := (Homeomorph.mk ratRealCoordEquiv.toEquiv
+    continuous_ratRealCoordEquiv continuous_ratRealCoordEquiv_symm).isEmbedding.t2Space
+  have : T2Space (Multiplicative (SAdeleRing ℚ Sq)) := ‹T2Space (SAdeleRing ℚ Sq)›
+  rw [levelIdent_mem_schwartzBruhatSubmodule_euclidean_iff ratEuclideanCoord g]
+  constructor
+  · rintro ⟨s, hs⟩
+    exact ⟨SchwartzMap.compCLMOfContinuousLinearEquiv ℂ ratEuclideanLine s, fun x ↦ hs x⟩
+  · rintro ⟨s, hs⟩
+    refine ⟨SchwartzMap.compCLMOfContinuousLinearEquiv ℂ ratEuclideanLine.symm s, fun x ↦ ?_⟩
+    change s (ratEuclideanLine.symm (ratEuclideanLine (eq x.toAdd))) = g x
+    rw [ContinuousLinearEquiv.symm_apply_apply]
+    exact hs x
+
+/-- Reconstruction: for `ℚ` with no finite place, the S-adelic Fourier transform of a test is
+the Fourier transform of its Schwartz function in the real coordinate. -/
+theorem ratSAdeleSchwartzFourier_apply (f : Bq) (s : 𝓢(ℝ, ℂ))
+    (hs : ∀ x, s (eq x.toAdd) = f x) (y : SAdeleRing ℚ Sq) :
+    sAdeleSchwartzFourier f (Multiplicative.ofAdd y) = 𝓕 s (eq y) := by
+  rw [SchwartzMap.fourier_coe, Real.fourier_real_eq]
+  change tamagawaFourier (sAdditiveTamagawaMeasure ℚ Sq) (sAdeleStandardCharacter ℚ Sq)
+    (fun x ↦ f (Multiplicative.ofAdd x)) y = _
+  rw [tamagawaFourier, ratIntegral_add]
+  refine integral_congr_ae (ae_of_all _ fun t ↦ ?_)
+  dsimp only
+  have hst : s t = f (Multiplicative.ofAdd (ratRealCoordEquiv.symm t)) := by
+    rw [← hs]
+    simp
+  rw [ratSAdeleStandardCharacter, map_mul ratRealCoordEquiv, RingEquiv.apply_symm_apply, hst,
+    Circle.smul_def, mul_comm]
+  congr 1
+  rw [Real.fourierChar_apply, Circle.coe_exp, Complex.star_def, ← Complex.exp_conj]
+  congr 1
+  simp only [map_mul, Complex.conj_ofReal, Complex.conj_I]
+  push_cast
+  ring
 
 end RatQuotient
 
